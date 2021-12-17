@@ -1,0 +1,2 @@
+# shitize
+pretty pictures generator
