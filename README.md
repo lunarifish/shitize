@@ -1,2 +1,4 @@
 # shitize
-pretty pictures generator
+a bad rework of [Tw1ddle/geometrize](https://github.com/Tw1ddle/geometrize) 
+done in python
+シテゼ
