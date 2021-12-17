@@ -1,38 +1,31 @@
-# src: https://blog.csdn.net/Ibelievesunshine/article/details/105681167
-
-# coding: utf-8
 import cv2
 import numpy as np
 import np_utils
-import colorsys
 
-def color_quantization(img, k_level):
-    #图像二维像素转换为一维
+def color_quantization(img, k_level):    # src: https://blog.csdn.net/Ibelievesunshine/article/details/105681167
     data = img.reshape((-1,3))
     data = np.float32(data)
 
-    #定义中心 (type,max_iter,epsilon)
     criteria = (cv2.TERM_CRITERIA_EPS +
                 cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
 
-    #设置标签
     flags = cv2.KMEANS_RANDOM_CENTERS
 
-    #K-Means聚类 聚集成2类
     compactness, labels, centers = cv2.kmeans(data, k_level, None, criteria, 10, flags)
-    print('compactness：', compactness)
-    print('labels.shape：', labels.shape)
-    print('centers.shape：', centers.shape)
+#     print('compactness：', compactness)
+#     print('labels.shape：', labels.shape)
+#     print('centers.shape：', centers.shape)
 #     print('labels：\n', labels)
 #     print('centers：\n', centers)
     
     centers = np.uint8(centers)
     res = centers[labels.flatten()]
-    print('res：\n', res)
+#     print('res：\n', res)
     dst = res.reshape((img.shape))
     
     return dst
 
+# create masks for color layers
 def seperate_colors(src, blur_size, quantize_level):
     blur = cv2.GaussianBlur(src,(blur_size, blur_size),0)
     hsv = cv2.cvtColor(blur, cv2.COLOR_RGB2HSV)
@@ -45,6 +38,7 @@ def seperate_colors(src, blur_size, quantize_level):
         masks.append(current)
     return colors, masks, src_quantized
 
+## not using them
 # def hsv2rgb(hsv):
 #     h = hsv[0] / 255
 #     s = hsv[1] / 255

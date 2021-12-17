@@ -2,58 +2,77 @@ import cv2
 import img_proc
 import numpy as np
 from np_utils import get_colors
-import matplotlib.pyplot as plt
+import sys
+import time
+from operator import itemgetter
 
-src = cv2.imread('src2.jpg')
+# load picture
+src = cv2.imread(sys.argv[1])
+filename = 'output.jpg'
 width = src.shape[1]
 height = src.shape[0]
-print(src.shape)
+print('Source width: {}\nSource height: {}\n'.format(width, height))
 
-quantize_level = 64
-blur_size = 75
+# color quantization & masking
+quantize_level = int(input('Colors:'))
+blur_size = int(input('Blurring intensity:'))
+if blur_size % 2 == 0: blur_size += 1
+print('\nColor quantization start\nQuantize series: {}\nFilter core size: {}'.format(quantize_level, blur_size))
+start_time = time.time()
 colors, masks, src_quantized = img_proc.seperate_colors(src, blur_size, quantize_level)
+src_quantized = cv2.cvtColor(src_quantized, cv2.COLOR_HSV2RGB)    # for preview, can be disabled
+print('Finished ({}s)'.format(time.time() - start_time))
 
-src_quantized = cv2.cvtColor(src_quantized, cv2.COLOR_HSV2RGB)
+# create a empty canvas to draw result
+result = np.zeros((height,width,3), np.uint8)
+result.fill(255)
 
-blank_image = np.zeros((height,width,3), np.uint8)
-blank_image.fill(255)
-src_size = width * height
-ellipse_size = [1, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05, 0]
-for size in range(len(ellipse_size)):
-    for mask in range(len(masks) - 1):
-        edge_threshold = 98
-        edge_threshold2 = 2.5 * edge_threshold
-        edge = cv2.Canny(masks[mask], edge_threshold, edge_threshold2)
-        print('1st edge detection succeed')
-        print('Creating a binary canvas')
-        edgeFC, hierarchy = cv2.findContours(edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(edge, edgeFC, -1, (255, 255, 255), 4)
-        edge = cv2.GaussianBlur(edge,(blur_size, blur_size),0)
-        ret, edge = cv2.threshold(edge, 127, 255, cv2.THRESH_BINARY|cv2.THRESH_OTSU)
-        edgeFC, hierarchy = cv2.findContours(edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+print('Analyzing ellipse size')
+shapes_count = 0
+ellipses = []
+sizes = []
+start_time = time.time()
+for mask in range(len(masks) - 1):    # repeat the process on every color layers
+    # canny
+    edge_threshold = 98
+    edge_threshold2 = 2.5 * edge_threshold
+    edge = cv2.Canny(masks[mask], edge_threshold, edge_threshold2)
 
-    #     print(colors)
-    #     print(img_proc.hsv2rgb(list(map(int,colors[mask]))))
-        print(list(map(int,colors[mask])))
-        for i in range(len(edgeFC)):
-            if len(edgeFC[i]) > 4:
-                ellipse = cv2.fitEllipse(edgeFC[i])
-                ell_size = ellipse[1][0] * ellipse[1][1]
-                if ell_size < ellipse_size[size] * src_size and ell_size > ellipse_size[size + 1] * src_size:
-                    cv2.ellipse(blank_image, ellipse, list(map(int,colors[mask])), -1)
-            else: pass
-
-blank_image = cv2.cvtColor(blank_image, cv2.COLOR_HSV2RGB)
+    # find closed contours
+    edgeFC, hierarchy = cv2.findContours(edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(edge, edgeFC, -1, (255, 255, 255), 4)    # draw thicker lines to fix discontinuous outline
+    edge = cv2.GaussianBlur(edge,(blur_size, blur_size),0)    # smooth
+    ret, edge = cv2.threshold(edge, 127, 255, cv2.THRESH_BINARY|cv2.THRESH_OTSU)
+    edgeFC, hierarchy = cv2.findContours(edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # drawing ellipses
+    for i in range(len(edgeFC)):
+        if len(edgeFC[i]) > 4:
+            ellipse = cv2.fitEllipse(edgeFC[i])
+            ell_size = ellipse[1][0] * ellipse[1][1] # multiply 2 axes's length of the ellipse to get relative size of the ellipse
+            ellipses.append([ellipse, colors[mask], ell_size])
+            shapes_count += 1
+        else: pass
+ellipses = sorted(ellipses, key = itemgetter(2), reverse = True) # draw big ellipses at first to avoid smaller ones being covered
+print('Finished ({}s)'.format(time.time() - start_time))
+print('Total shapes: {}'.format(shapes_count))
+print('Drawing shapes to the canvas')
+start_time = time.time()
+for ellipse in ellipses:
+    cv2.ellipse(result, ellipse[0], list(map(int,ellipse[1])), -1)
+print('Finished ({}s)'.format(time.time() - start_time))
+result = cv2.cvtColor(result, cv2.COLOR_HSV2RGB)
+cv2.imwrite(filename, result)
+print('Result saved as {}'.format(filename))
 cv2.imshow('src', src)
 cv2.imshow('src_quantized', src_quantized)
-# cv2.imshow('mask', edge)
-cv2.imshow('output', blank_image)
-
+cv2.imshow('mask', edge)
+cv2.imshow('output', result)
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-
+## remove convenity defects on contours
+## result is WAY TOO terrible someone help me SOS
 # for i in range(len(edgeFC)):
 #     if cv2.contourArea(edgeFC[i]) > 100:
 #         points_far = []
