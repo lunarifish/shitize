@@ -5,5 +5,5 @@ done in python
 
 ## usage
 ```
-python main.py [image filename]
+python main.py [image path]
 ```
