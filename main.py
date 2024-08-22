@@ -1,14 +1,13 @@
 import cv2
 import img_proc
 import numpy as np
-from np_utils import get_colors
 import sys
 import time
 from operator import itemgetter
 
 # load picture
 src = cv2.imread(sys.argv[1])
-filename = 'output.jpg'
+filename = 'assets/output.jpg'
 width = src.shape[1]
 height = src.shape[0]
 print('Source width: {}\nSource height: {}\n'.format(width, height))

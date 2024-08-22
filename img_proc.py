@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
-import np_utils
+
+def get_colors(src):
+    src = np.reshape(src, (-1, 3))
+    colors = np.array(list(set([tuple(t) for t in src])))
+    return colors
 
 def color_quantization(img, k_level):    # src: https://blog.csdn.net/Ibelievesunshine/article/details/105681167
     data = img.reshape((-1,3))
@@ -31,7 +35,7 @@ def seperate_colors(src, blur_size, quantize_level):
     hsv = cv2.cvtColor(blur, cv2.COLOR_RGB2HSV)
 
     src_quantized = color_quantization(hsv, k_level = quantize_level)
-    colors = np_utils.get_colors(src_quantized)
+    colors = get_colors(src_quantized)
     masks = []
     for i in colors:
         current = cv2.inRange(src_quantized, lowerb = i, upperb = i)
